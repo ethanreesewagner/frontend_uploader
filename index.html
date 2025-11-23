@@ -147,6 +147,17 @@
             return null;
         }
 
+        // Generate or retrieve session ID
+        function getSessionId() {
+            let sessionId = getCookie('sessionId');
+            if (!sessionId) {
+                // Generate a unique session ID
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                setCookie('sessionId', sessionId, 7);
+            }
+            return sessionId;
+        }
+
         // PDF Upload
         const uploadForm = document.getElementById('uploadForm');
         const uploadStatus = document.getElementById('uploadStatus');
@@ -162,6 +173,7 @@
             }
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            formData.append('id', getSessionId());
             document.getElementById('uploadBtn').disabled = true;
             uploadStatus.textContent = '';
             embeddingLoading.style.display = 'flex';
@@ -171,7 +183,7 @@
                     body: formData
                 });
                 if (response.ok) {
-                    const data = await response.json();
+                    const data = await response.text();
                     embeddingLoading.style.display = 'none';
                     uploadStatus.textContent = 'Upload successful! PDF processed.';
                 } else {
@@ -246,7 +258,10 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ 
+                        message: message,
+                        id: getSessionId()
+                    })
                 });
                 agentLoading.style.display = 'none';
                 if (response.ok) {
