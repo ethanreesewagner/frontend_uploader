@@ -99,10 +99,43 @@
             display: none;
             align-items: center;
         }
+        #sessionInfo {
+            background: #e3f2fd;
+            padding: 1em;
+            border-radius: 6px;
+            margin-bottom: 2em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #sessionIdDisplay {
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #1976d2;
+            font-weight: bold;
+        }
+        #newSessionBtn {
+            padding: 0.5em 1.2em;
+            border-radius: 4px;
+            border: none;
+            background: #1976d2;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #newSessionBtn:hover {
+            background: #1565c0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div id="sessionInfo">
+            <div>
+                <strong>Session ID:</strong> <span id="sessionIdDisplay"></span>
+            </div>
+            <button id="newSessionBtn">New Session</button>
+        </div>
         <h2>PDF Upload</h2>
         <form id="uploadForm">
             <input type="file" id="pdfFile" name="file" accept="application/pdf" required>
@@ -147,15 +180,38 @@
             return null;
         }
 
-        // Generate or retrieve session ID
+        // Generate a new session ID
+        function generateSessionId() {
+            const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            setCookie('sessionId', sessionId, 7);
+            updateSessionDisplay();
+            return sessionId;
+        }
+
+        // Get current session ID or generate one if it doesn't exist
         function getSessionId() {
             let sessionId = getCookie('sessionId');
             if (!sessionId) {
-                // Generate a unique session ID
-                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                setCookie('sessionId', sessionId, 7);
+                sessionId = generateSessionId();
             }
             return sessionId;
+        }
+
+        // Update the session ID display
+        function updateSessionDisplay() {
+            const sessionId = getCookie('sessionId');
+            if (sessionId) {
+                document.getElementById('sessionIdDisplay').textContent = sessionId;
+            }
+        }
+
+        // Create a new session
+        function createNewSession() {
+            generateSessionId();
+            // Clear chat history for new session
+            chatHistory = [];
+            chatBox.innerHTML = '';
+            saveChatToCookies();
         }
 
         // PDF Upload
@@ -171,9 +227,11 @@
                 uploadStatus.textContent = 'Please select a PDF file.';
                 return;
             }
+            // Generate a new session ID for each upload
+            const sessionId = generateSessionId();
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            formData.append('id', getSessionId());
+            formData.append('id', sessionId);
             document.getElementById('uploadBtn').disabled = true;
             uploadStatus.textContent = '';
             embeddingLoading.style.display = 'flex';
@@ -239,8 +297,16 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // On page load, restore chat
-        window.addEventListener('DOMContentLoaded', loadChatFromCookies);
+        // New Session button
+        document.getElementById('newSessionBtn').addEventListener('click', function() {
+            createNewSession();
+        });
+
+        // On page load, restore chat and display session ID
+        window.addEventListener('DOMContentLoaded', function() {
+            loadChatFromCookies();
+            updateSessionDisplay();
+        });
 
         chatForm.addEventListener('submit', async function(e) {
             e.preventDefault();
